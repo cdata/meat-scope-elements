@@ -1,0 +1,90 @@
+<link rel="import" href="../polymer/polymer.html">
+<dom-module id="meat-scope-devices">
+  <script>
+    (function() {
+      'use strict';
+
+      var enumerateDevices = (function() {
+        if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+          return navigator.mediaDevices.enumerateDevices
+              .bind(navigator.mediaDevices);
+        } else if (window.MediaStreamTrack && MediaStreamTrack.getSources) {
+          return function() {
+            return new Promise(function(resolve, reject) {
+              try {
+                MediaStreamTrack.getSources(function(sources) {
+                  resolve(sources.map(function(source) {
+                    source.deviceId = source.deviceId || source.id;
+                    return source;
+                  }));
+                });
+              } catch (e) {
+                reject(e);
+              }
+            });
+          }
+        }
+
+        return function() {
+          return Promise.reject('Browser does not support device enumeration!');
+        };
+      })();
+
+      function enumerateCameras() {
+        var videoMatch = /video/i;
+
+        return enumerateDevices().then(function(devices) {
+          return devices.filter(function(device) {
+            return videoMatch.test(device.kind);
+          });
+        });
+      }
+
+      Polymer({
+        is: 'meat-scope-devices',
+
+        properties: {
+          hasMultipleCameras: {
+            type: Boolean,
+            readOnly: true,
+            notify: true
+          },
+
+          selectedCameraIndex: {
+            type: Number,
+            value: 0,
+            observer: '__selectedCameraIndexChanged'
+          },
+
+          selectedCamera: {
+            type: Object,
+            notify: true,
+            readOnly: true
+          }
+        },
+
+        ready: function() {
+          enumerateCameras().then(function(cameras) {
+            this._setHasMultipleCameras(cameras.length > 1);
+          }.bind(this));
+        },
+
+        switchToNextCamera: function() {
+          return enumerateCameras().then(function(cameras) {
+            if ((this.selectedCameraIndex + 1) < cameras.length) {
+              this.selectedCameraIndex++;
+            } else {
+              this.selectedCameraIndex = 0;
+            }
+          }.bind(this));
+        },
+
+        __selectedCameraIndexChanged: function(selectedCameraIndex) {
+          enumerateCameras().then(function(cameras) {
+            this._setSelectedCamera(cameras[selectedCameraIndex]);
+          }.bind(this));
+        }
+      });
+    })();
+  </script>
+</dom-module>
