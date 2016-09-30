@@ -134,7 +134,11 @@
           this.transform = null;
 
           for (var i = 0; i < this.contexts.length; ++i) {
-            this.contexts[i].resetTransform();
+            try {
+              this.contexts[i].resetTransform();
+            } catch (e) {
+              this.contexts[i].setTransform(1, 0, 0, 1, 0, 0);
+            }
           }
         },
 
@@ -303,7 +307,11 @@
         },
 
         applyToContext: function(context) {
-          context.resetTransform();
+          try {
+            context.resetTransform();
+          } catch (e) {
+            context.setTransform(1, 0, 0, 1, 0, 0);
+          }
           window.transform = this;
           context.scale(this.scaleX, this.scaleY);
           context.rotate(this.rotation * this.radianRatio);
